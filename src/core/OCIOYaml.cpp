@@ -109,6 +109,18 @@ OCIO_NAMESPACE_ENTER
 #endif
         }
         
+        // Read a YAML document
+
+        inline void read(std::istream& istream, YAML::None &node)
+        {
+#ifdef OLDYAML
+            YAML::Parser parser(istream);
+            parser.GetNextDocument(node);
+#else
+            node = YAML::Load(istream);
+#endif
+        }
+
         // Basic types
         
         inline void load(const YAML::Node& node, bool& x)
@@ -1401,6 +1413,106 @@ OCIO_NAMESPACE_ENTER
             out << YAML::Newline;
         }
         
+        // oct file
+
+        inline void saveTransform(YAML::Emitter& out, ConstTransformRcPtr &t)
+        {
+            out << YAML::Block;
+            out << YAML::BeginMap;
+            out << YAML::Key << "ocio_transform_version" << YAML::Value << 1;
+            out << YAML::Newline;
+#ifndef OLDYAML
+            out << YAML::Newline;
+#endif
+            save(out, t)
+
+            out << YAML::EndMap;
+        }
+
+        inline void loadTransform(const YAML::Node& node, TransformRcPtr& t, const char *filename)
+        {
+            // check profile version
+            int transform_version = 0;
+#ifdef OLDYAML
+            if(node.FindValue("ocio_transform_version") == NULL)
+#else
+            if(node["ocio_transform_version"] == NULL)
+#endif
+            {
+                std::ostringstream os;
+                os << "The specified file ";
+                if(filename && *filename)
+                {
+                    os << "'" << filename << "' ";
+                }
+                os << "does not appear to be an OCIO transform.";
+                throw Exception (os.str().c_str());
+            }
+
+            load(node["ocio_transform_version"], transform_version);
+            if(profile_version > 1)
+            {
+                std::ostringstream os;
+                os << "This .oct file ";
+                if(filename && *filename)
+                {
+                    os << "'" << filename << "' ";
+                }
+                os << "is version " << transform_version << ". ";
+                os << "This version of the OpenColorIO library (" << OCIO_VERSION ") ";
+                os << "is not known to be able to load this transform file. ";
+                os << "An attempt will be made, but there are no guarantees that the ";
+                os << "results will be accurate. Continue at your own risk.";
+                LogWarning(os.str());
+            }
+
+            std::string key;
+            int transformsLoaded = 0;
+
+            for (Iterator iter = node.begin(); iter != node.end(); ++iter)
+            {
+                const YAML::Node& first = get_first(iter);
+                const YAML::Node& second = get_second(iter);
+
+                if (second.Type() == YAML::NodeType::Null) continue;
+
+                load(first, key);
+
+                if(key == "ocio_transform_version") { } // Already handled above.
+                else
+                {
+                    if (! transformsLoaded)
+                    {
+                        load(node, t);
+                    }
+                    transformsLoaded += 1;
+                }
+                if(transformsLoaded == 0)
+                {
+                    std::ostringstream os;
+                    os << "No transforms loaded from .oct file"
+                    if(filename && *filename)
+                    {
+                        os << " '" << filename << "'";
+                    }
+                    os << ".";
+                    throw Exception(os.str().c_str());
+                }
+                else if(transformsLoaded > 1)
+                {
+                    std::ostringstream os;
+                    os << "The .oct file "
+                    if(filename && *filename)
+                    {
+                        os << "'" << filename << "' ";
+                    }
+                    os << "contains more than one transform.  Only the first ";
+                    os << "transform was loaded.";
+                    LogWarning(os.str());
+                }
+            }
+        }
+
         // Config
         
         inline void load(const YAML::Node& node, ConfigRcPtr& c, const char* filename)
@@ -1416,6 +1528,10 @@ OCIO_NAMESPACE_ENTER
             {
                 std::ostringstream os;
                 os << "The specified file ";
+                if(filename && *filename)
+                {
+                    os << "'" << filename << "' ";
+                }
                 os << "does not appear to be an OCIO configuration.";
                 throw Exception (os.str().c_str());
             }
@@ -1427,7 +1543,7 @@ OCIO_NAMESPACE_ENTER
                 os << "This .ocio config ";
                 if(filename && *filename)
                 {
-                    os << " '" << filename << "' ";
+                    os << "'" << filename << "' ";
                 }
                 os << "is version " << profile_version << ". ";
                 os << "This version of the OpenColorIO library (" << OCIO_VERSION ") ";
@@ -1787,13 +1903,8 @@ OCIO_NAMESPACE_ENTER
     {
         try
         {
-#ifdef OLDYAML
-            YAML::Parser parser(istream);
             YAML::Node node;
-            parser.GetNextDocument(node);
-#else
-            YAML::Node node = YAML::Load(istream);
-#endif
+            read(istream, node);
             load(node, c, filename);
         }
         catch(const std::exception & e)
@@ -1813,5 +1924,30 @@ OCIO_NAMESPACE_ENTER
         ostream << out.c_str();
     }
     
+    void OCIOYaml::open(std::istream& istream, TransformRcPtr t, const char* filename) const
+    {
+        try
+        {
+            YAML::Node node;
+            read(istream, node);
+            loadTransform(node, t, filename);
+        }
+        catch(const std::exception & e)
+        {
+            std::ostringstream os;
+            os << "Error: Loading the OCIO transform ";
+            if(filename) os << "'" << filename << "' ";
+            os << "failed. " << e.what();
+            throw Exception(os.str().c_str());
+        }
+    }
+
+    void OCIOYaml::write(std::ostream& ostream, ConstTransformRcPtr t) const
+    {
+        YAML::Emitter out;
+        saveTransform(out, t);
+        ostream << out.c_str();
+    }
+
 }
 OCIO_NAMESPACE_EXIT
