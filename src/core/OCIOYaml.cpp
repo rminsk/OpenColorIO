@@ -111,7 +111,7 @@ OCIO_NAMESPACE_ENTER
         
         // Read a YAML document
 
-        inline void read(std::istream& istream, YAML::None &node)
+        inline void read(std::istream& istream, YAML::Node &node)
         {
 #ifdef OLDYAML
             YAML::Parser parser(istream);
@@ -1424,7 +1424,7 @@ OCIO_NAMESPACE_ENTER
 #ifndef OLDYAML
             out << YAML::Newline;
 #endif
-            save(out, t)
+            save(out, t);
 
             out << YAML::EndMap;
         }
@@ -1450,7 +1450,7 @@ OCIO_NAMESPACE_ENTER
             }
 
             load(node["ocio_transform_version"], transform_version);
-            if(profile_version > 1)
+            if(transform_version > 1)
             {
                 std::ostringstream os;
                 os << "This .oct file ";
@@ -1487,29 +1487,29 @@ OCIO_NAMESPACE_ENTER
                     }
                     transformsLoaded += 1;
                 }
-                if(transformsLoaded == 0)
+            }
+            if(transformsLoaded == 0)
+            {
+                std::ostringstream os;
+                os << "No transforms loaded from .oct file";
+                if(filename && *filename)
                 {
-                    std::ostringstream os;
-                    os << "No transforms loaded from .oct file"
-                    if(filename && *filename)
-                    {
-                        os << " '" << filename << "'";
-                    }
-                    os << ".";
-                    throw Exception(os.str().c_str());
+                    os << " '" << filename << "'";
                 }
-                else if(transformsLoaded > 1)
+                os << ".";
+                throw Exception(os.str().c_str());
+            }
+            else if(transformsLoaded > 1)
+            {
+                std::ostringstream os;
+                os << "The .oct file ";
+                if(filename && *filename)
                 {
-                    std::ostringstream os;
-                    os << "The .oct file "
-                    if(filename && *filename)
-                    {
-                        os << "'" << filename << "' ";
-                    }
-                    os << "contains more than one transform.  Only the first ";
-                    os << "transform was loaded.";
-                    LogWarning(os.str());
+                    os << "'" << filename << "' ";
                 }
+                os << "contains more than one transform.  Only the first ";
+                os << "transform was loaded.";
+                LogWarning(os.str());
             }
         }
 
@@ -1781,7 +1781,7 @@ OCIO_NAMESPACE_ENTER
             {
                 out << YAML::Key << "environment";
                 out << YAML::Value << YAML::BeginMap;
-                for(unsigned i = 0; i < c->getNumEnvironmentVars(); ++i)
+                for(int i = 0; i < c->getNumEnvironmentVars(); ++i)
                 {   
                     const char* name = c->getEnvironmentVarNameByIndex(i);
                     out << YAML::Key << name;
@@ -1812,7 +1812,7 @@ OCIO_NAMESPACE_ENTER
 #endif
             out << YAML::Key << "roles";
             out << YAML::Value << YAML::BeginMap;
-            for(unsigned i = 0; i < c->getNumRoles(); ++i)
+            for(int i = 0; i < c->getNumRoles(); ++i)
             {
                 const char* role = c->getRoleName(i);
                 out << YAML::Key << role;
@@ -1827,12 +1827,12 @@ OCIO_NAMESPACE_ENTER
             out << YAML::Newline;
             out << YAML::Key << "displays";
             out << YAML::Value << YAML::BeginMap;
-            for(unsigned i = 0; i < c->getNumDisplays(); ++i)
+            for(int i = 0; i < c->getNumDisplays(); ++i)
             {
                 const char* display = c->getDisplay(i);
                 out << YAML::Key << display;
                 out << YAML::Value << YAML::BeginSeq;
-                for(unsigned v = 0; v < c->getNumViews(display); ++v)
+                for(int v = 0; v < c->getNumViews(display); ++v)
                 {
                     View dview;
                     dview.name = c->getView(display, v);
@@ -1870,7 +1870,7 @@ OCIO_NAMESPACE_ENTER
                 out << YAML::Newline;
                 out << YAML::Key << "looks";
                 out << YAML::Value << YAML::BeginSeq;
-                for(unsigned i = 0; i < c->getNumLooks(); ++i)
+                for(int i = 0; i < c->getNumLooks(); ++i)
                 {
                     const char* name = c->getLookNameByIndex(i);
                     save(out, c->getLook(name));
@@ -1884,7 +1884,7 @@ OCIO_NAMESPACE_ENTER
                 out << YAML::Newline;
                 out << YAML::Key << "colorspaces";
                 out << YAML::Value << YAML::BeginSeq;
-                for(unsigned i = 0; i < c->getNumColorSpaces(); ++i)
+                for(int i = 0; i < c->getNumColorSpaces(); ++i)
                 {
                     const char* name = c->getColorSpaceNameByIndex(i);
                     save(out, c->getColorSpace(name));
@@ -1899,7 +1899,7 @@ OCIO_NAMESPACE_ENTER
     
     ///////////////////////////////////////////////////////////////////////////
     
-    void OCIOYaml::open(std::istream& istream, ConfigRcPtr& c, const char* filename) const
+    void OCIOYaml::open(std::istream& istream, ConfigRcPtr& c, const char* filename)
     {
         try
         {
@@ -1917,14 +1917,15 @@ OCIO_NAMESPACE_ENTER
         }
     }
     
-    void OCIOYaml::write(std::ostream& ostream, const Config* c) const
+    void OCIOYaml::write(std::ostream& ostream, const Config* c)
     {
         YAML::Emitter out;
         save(out, c);
         ostream << out.c_str();
     }
     
-    void OCIOYaml::open(std::istream& istream, TransformRcPtr t, const char* filename) const
+    void OCIOYaml::open(std::istream& istream, TransformRcPtr& t,
+                        const char* filename)
     {
         try
         {
@@ -1942,7 +1943,7 @@ OCIO_NAMESPACE_ENTER
         }
     }
 
-    void OCIOYaml::write(std::ostream& ostream, ConstTransformRcPtr t) const
+    void OCIOYaml::write(std::ostream& ostream, ConstTransformRcPtr t)
     {
         YAML::Emitter out;
         saveTransform(out, t);
