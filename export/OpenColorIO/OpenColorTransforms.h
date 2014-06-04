@@ -58,6 +58,11 @@ OCIO_NAMESPACE_ENTER
         virtual TransformDirection getDirection() const = 0;
         virtual void setDirection(TransformDirection dir) = 0;
         
+        //!cpp:function::
+        // Outputs a representation of the Transform in YAML text form.
+        // This is typically stored on disk in a file with the extension .oct.
+        void serialize(std::ostream & os) const;
+
     private:
         Transform& operator= (const Transform &);
     };

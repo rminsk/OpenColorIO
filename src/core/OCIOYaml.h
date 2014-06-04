@@ -42,7 +42,7 @@ OCIO_NAMESPACE_ENTER
         static void open(std::istream& istream, TransformRcPtr& c,
                          const char* filename = NULL);
         static void write(std::ostream& ostream, const Config* c);
-        static void write(std::ostream& ostream, ConstTransformRcPtr t);
+        static void write(std::ostream& ostream, const Transform* t);
     };
     
 }

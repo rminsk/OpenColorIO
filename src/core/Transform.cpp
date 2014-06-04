@@ -31,6 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "FileTransform.h"
 #include "OpBuilders.h"
 #include "Processor.h"
+#include "OCIOYaml.h"
 
 #include <sstream>
 
@@ -38,8 +39,21 @@ OCIO_NAMESPACE_ENTER
 {
     Transform::~Transform()
     { }
-    
-    
+
+    void Transform::serialize(std::ostream& os) const
+    {
+        try
+        {
+            OCIOYaml::write(os, this);
+        }
+        catch( const std::excpetion& e)
+        {
+            std::ostringstream error;
+            error << "Error building YAML: " << e.what();
+            throw Exception(error.str().c_str());
+        }
+    }
+
     void BuildOps(OpRcPtrVec & ops,
                   const Config & config,
                   const ConstContextRcPtr & context,

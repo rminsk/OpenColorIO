@@ -1207,7 +1207,7 @@ OCIO_NAMESPACE_ENTER
             else
                 throw Exception("Unsupported Transform() type for serialization.");
         }
-        
+
         // ColorSpace
         
         inline void load(const YAML::Node& node, ColorSpaceRcPtr& cs)
@@ -1415,7 +1415,7 @@ OCIO_NAMESPACE_ENTER
         
         // oct file
 
-        inline void saveTransform(YAML::Emitter& out, ConstTransformRcPtr &t)
+        inline void saveTransform(YAML::Emitter& out, ConstTransformRcPtr& t)
         {
             out << YAML::Block;
             out << YAML::BeginMap;
@@ -1425,7 +1425,6 @@ OCIO_NAMESPACE_ENTER
             out << YAML::Newline;
 #endif
             save(out, t);
-
             out << YAML::EndMap;
         }
 
@@ -1943,10 +1942,20 @@ OCIO_NAMESPACE_ENTER
         }
     }
 
-    void OCIOYaml::write(std::ostream& ostream, ConstTransformRcPtr t)
+    void OCIOYaml::write(std::ostream& ostream, const Transform *t)
     {
         YAML::Emitter out;
-        saveTransform(out, t);
+        ConstTransformRcPtr trc(t);
+        try
+        {
+            saveTransform(out, trc);
+        }
+        catch (...)
+        {
+            trc.reset();
+            throw;
+        }
+        trc.reset();
         ostream << out.c_str();
     }
 
