@@ -188,6 +188,7 @@ OCIO_NAMESPACE_ENTER
         PyObject * PyOCIO_Transform_createEditableCopy(PyObject * self);
         PyObject * PyOCIO_Transform_getDirection(PyObject * self);
         PyObject * PyOCIO_Transform_setDirection(PyObject * self,PyObject * args);
+        PyObject * PyOCIO_Transform_serialize(PyObject * self);
         
         ///////////////////////////////////////////////////////////////////////
         ///
@@ -200,7 +201,9 @@ OCIO_NAMESPACE_ENTER
             { "getDirection",
             (PyCFunction) PyOCIO_Transform_getDirection, METH_NOARGS, TRANSFORM_GETDIRECTION__DOC__ },
             { "setDirection",
-            PyOCIO_Transform_setDirection, METH_VARARGS, TRANSFORM_SETDIRECTION__DOC__ },
+            (PyCFunction) PyOCIO_Transform_setDirection, METH_VARARGS, TRANSFORM_SETDIRECTION__DOC__ },
+            { "serialize",
+            (PyCFunction) PyOCIO_Transform_serialize, METH_NOARGS, TRANSFORM_SERIALIZE__DOC__ },
             { NULL, NULL, 0, NULL }
         };
         
@@ -312,7 +315,17 @@ OCIO_NAMESPACE_ENTER
             Py_RETURN_NONE;
             OCIO_PYTRY_EXIT(NULL)
         }
-        
+
+        PyObject * PyOCIO_Transform_serialize(PyObject * self)
+        {
+            OCIO_PYTRY_ENTER()
+            ConstTransformRcPtr transform = GetConstTransform(self, true);
+            std::ostringstream os;
+            transform->serialize(os);
+            return PyString_FromString(os.str().c_str());
+            OCIO_PYTRY_EXIT(NULL)
+        }
+
     }
     
 }
