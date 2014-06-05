@@ -38,4 +38,5 @@ public class Transform extends LoadLibrary
     public native Transform createEditableCopy();
     public native TransformDirection getDirection();
     public native void setDirection(TransformDirection dir);
+    public native String serialize();
 }

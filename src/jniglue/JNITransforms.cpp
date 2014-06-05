@@ -69,6 +69,17 @@ Java_org_OpenColorIO_Transform_setDirection(JNIEnv * env, jobject self, jobject 
     OCIO_JNITRY_EXIT()
 }
 
+JNIEXPORT jstring JNICALL
+Java_org_OpenColorIO_Transform_serialize(JNIEnv * env, jobject self)
+{
+    OCIO_JNITRY_ENTER()
+    ConstTransformRcPtr transform = GetConstJOCIO<ConstTransformRcPtr, TransformJNI>(env, self);
+    std::ostringstream os;
+    transform->serialize(os);
+    return env->NewStringUTF(os.str().c_str());
+    OCIO_JNITRY_EXIT(NULL)
+}
+
 // AllocationTransform
 
 JNIEXPORT jobject JNICALL
