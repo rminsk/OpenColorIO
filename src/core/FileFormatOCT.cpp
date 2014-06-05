@@ -69,7 +69,7 @@ OCIO_NAMESPACE_ENTER
         {
             FormatInfo info;
             info.name = "ocio_transform";
-            info.extension = "oct";
+            info.extension = "ociot";
             info.capabilities = FORMAT_CAPABILITY_READ;
             formatInfoVec.push_back(info);
         }

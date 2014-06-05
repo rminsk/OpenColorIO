@@ -1413,7 +1413,7 @@ OCIO_NAMESPACE_ENTER
             out << YAML::Newline;
         }
         
-        // oct file
+        // ociot file
 
         inline void saveTransform(YAML::Emitter& out, ConstTransformRcPtr& t)
         {
@@ -1424,6 +1424,8 @@ OCIO_NAMESPACE_ENTER
 #ifndef OLDYAML
             out << YAML::Newline;
 #endif
+            out << YAML::Key << "transform";
+            out << YAML::Value;
             save(out, t);
             out << YAML::EndMap;
         }
@@ -1433,9 +1435,11 @@ OCIO_NAMESPACE_ENTER
             // check profile version
             int transform_version = 0;
 #ifdef OLDYAML
-            if(node.FindValue("ocio_transform_version") == NULL)
+            if(node.FindValue("ocio_transform_version") == NULL ||
+               node.FindValue("transform") == NULL)
 #else
-            if(node["ocio_transform_version"] == NULL)
+            if(node["ocio_transform_version"] == NULL ||
+               node["transform"] == NULL)
 #endif
             {
                 std::ostringstream os;
@@ -1452,7 +1456,7 @@ OCIO_NAMESPACE_ENTER
             if(transform_version > 1)
             {
                 std::ostringstream os;
-                os << "This .oct file ";
+                os << "This .ociot file ";
                 if(filename && *filename)
                 {
                     os << "'" << filename << "' ";
@@ -1465,51 +1469,8 @@ OCIO_NAMESPACE_ENTER
                 LogWarning(os.str());
             }
 
-            std::string key;
-            int transformsLoaded = 0;
+            load(node["transform"], t);
 
-            for (Iterator iter = node.begin(); iter != node.end(); ++iter)
-            {
-                const YAML::Node& first = get_first(iter);
-                const YAML::Node& second = get_second(iter);
-
-                if (second.Type() == YAML::NodeType::Null) continue;
-
-                load(first, key);
-
-                if(key == "ocio_transform_version") { } // Already handled above.
-                else
-                {
-                    if (! transformsLoaded)
-                    {
-                        load(node, t);
-                    }
-                    transformsLoaded += 1;
-                }
-            }
-            if(transformsLoaded == 0)
-            {
-                std::ostringstream os;
-                os << "No transforms loaded from .oct file";
-                if(filename && *filename)
-                {
-                    os << " '" << filename << "'";
-                }
-                os << ".";
-                throw Exception(os.str().c_str());
-            }
-            else if(transformsLoaded > 1)
-            {
-                std::ostringstream os;
-                os << "The .oct file ";
-                if(filename && *filename)
-                {
-                    os << "'" << filename << "' ";
-                }
-                os << "contains more than one transform.  Only the first ";
-                os << "transform was loaded.";
-                LogWarning(os.str());
-            }
         }
 
         // Config
@@ -1942,20 +1903,13 @@ OCIO_NAMESPACE_ENTER
         }
     }
 
+    struct NoDeleter { template <typename T> void operator()(T *) {} };
+
     void OCIOYaml::write(std::ostream& ostream, const Transform *t)
     {
         YAML::Emitter out;
-        ConstTransformRcPtr trc(t);
-        try
-        {
-            saveTransform(out, trc);
-        }
-        catch (...)
-        {
-            trc.reset();
-            throw;
-        }
-        trc.reset();
+        ConstTransformRcPtr trc(t, NoDeleter());
+        saveTransform(out, trc);
         ostream << out.c_str();
     }
 

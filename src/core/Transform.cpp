@@ -46,7 +46,7 @@ OCIO_NAMESPACE_ENTER
         {
             OCIOYaml::write(os, this);
         }
-        catch( const std::excpetion& e)
+        catch(const std::exception& e)
         {
             std::ostringstream error;
             error << "Error building YAML: " << e.what();
