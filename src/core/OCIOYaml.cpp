@@ -109,6 +109,18 @@ OCIO_NAMESPACE_ENTER
 #endif
         }
         
+        // Read a YAML document
+
+        inline void read(std::istream& istream, YAML::Node &node)
+        {
+#ifdef OLDYAML
+            YAML::Parser parser(istream);
+            parser.GetNextDocument(node);
+#else
+            node = YAML::Load(istream);
+#endif
+        }
+
         // Basic types
         
         inline void load(const YAML::Node& node, bool& x)
@@ -1195,7 +1207,7 @@ OCIO_NAMESPACE_ENTER
             else
                 throw Exception("Unsupported Transform() type for serialization.");
         }
-        
+
         // ColorSpace
         
         inline void load(const YAML::Node& node, ColorSpaceRcPtr& cs)
@@ -1413,6 +1425,66 @@ OCIO_NAMESPACE_ENTER
             out << YAML::Newline;
         }
         
+        // ociot file
+
+        inline void saveTransform(YAML::Emitter& out, ConstTransformRcPtr& t)
+        {
+            out << YAML::Block;
+            out << YAML::BeginMap;
+            out << YAML::Key << "ocio_transform_version" << YAML::Value << 1;
+            out << YAML::Newline;
+#ifndef OLDYAML
+            out << YAML::Newline;
+#endif
+            out << YAML::Key << "transform";
+            out << YAML::Value;
+            save(out, t);
+            out << YAML::EndMap;
+        }
+
+        inline void loadTransform(const YAML::Node& node, TransformRcPtr& t, const char *filename)
+        {
+            // check profile version
+            int transform_version = 0;
+#ifdef OLDYAML
+            if(node.FindValue("ocio_transform_version") == NULL ||
+               node.FindValue("transform") == NULL)
+#else
+            if(node["ocio_transform_version"] == NULL ||
+               node["transform"] == NULL)
+#endif
+            {
+                std::ostringstream os;
+                os << "The specified file ";
+                if(filename && *filename)
+                {
+                    os << "'" << filename << "' ";
+                }
+                os << "does not appear to be an OCIO transform.";
+                throw Exception (os.str().c_str());
+            }
+
+            load(node["ocio_transform_version"], transform_version);
+            if(transform_version > 1)
+            {
+                std::ostringstream os;
+                os << "This .ociot file ";
+                if(filename && *filename)
+                {
+                    os << "'" << filename << "' ";
+                }
+                os << "is version " << transform_version << ". ";
+                os << "This version of the OpenColorIO library (" << OCIO_VERSION ") ";
+                os << "is not known to be able to load this transform file. ";
+                os << "An attempt will be made, but there are no guarantees that the ";
+                os << "results will be accurate. Continue at your own risk.";
+                LogWarning(os.str());
+            }
+
+            load(node["transform"], t);
+
+        }
+
         // Config
         
         inline void load(const YAML::Node& node, ConfigRcPtr& c, const char* filename)
@@ -1428,6 +1500,10 @@ OCIO_NAMESPACE_ENTER
             {
                 std::ostringstream os;
                 os << "The specified file ";
+                if(filename && *filename)
+                {
+                    os << "'" << filename << "' ";
+                }
                 os << "does not appear to be an OCIO configuration.";
                 throw Exception (os.str().c_str());
             }
@@ -1439,7 +1515,7 @@ OCIO_NAMESPACE_ENTER
                 os << "This .ocio config ";
                 if(filename && *filename)
                 {
-                    os << " '" << filename << "' ";
+                    os << "'" << filename << "' ";
                 }
                 os << "is version " << profile_version << ". ";
                 os << "This version of the OpenColorIO library (" << OCIO_VERSION ") ";
@@ -1677,7 +1753,7 @@ OCIO_NAMESPACE_ENTER
             {
                 out << YAML::Key << "environment";
                 out << YAML::Value << YAML::BeginMap;
-                for(unsigned i = 0; i < c->getNumEnvironmentVars(); ++i)
+                for(int i = 0; i < c->getNumEnvironmentVars(); ++i)
                 {   
                     const char* name = c->getEnvironmentVarNameByIndex(i);
                     out << YAML::Key << name;
@@ -1708,7 +1784,7 @@ OCIO_NAMESPACE_ENTER
 #endif
             out << YAML::Key << "roles";
             out << YAML::Value << YAML::BeginMap;
-            for(unsigned i = 0; i < c->getNumRoles(); ++i)
+            for(int i = 0; i < c->getNumRoles(); ++i)
             {
                 const char* role = c->getRoleName(i);
                 out << YAML::Key << role;
@@ -1723,12 +1799,12 @@ OCIO_NAMESPACE_ENTER
             out << YAML::Newline;
             out << YAML::Key << "displays";
             out << YAML::Value << YAML::BeginMap;
-            for(unsigned i = 0; i < c->getNumDisplaysAll(); ++i)
+            for(int i = 0; i < c->getNumDisplaysAll(); ++i)
             {
                 const char* display = c->getDisplayAll(i);
                 out << YAML::Key << display;
                 out << YAML::Value << YAML::BeginSeq;
-                for(unsigned v = 0; v < c->getNumViews(display); ++v)
+                for(int v = 0; v < c->getNumViews(display); ++v)
                 {
                     View dview;
                     dview.name = c->getView(display, v);
@@ -1766,7 +1842,7 @@ OCIO_NAMESPACE_ENTER
                 out << YAML::Newline;
                 out << YAML::Key << "looks";
                 out << YAML::Value << YAML::BeginSeq;
-                for(unsigned i = 0; i < c->getNumLooks(); ++i)
+                for(int i = 0; i < c->getNumLooks(); ++i)
                 {
                     const char* name = c->getLookNameByIndex(i);
                     save(out, c->getLook(name));
@@ -1780,7 +1856,7 @@ OCIO_NAMESPACE_ENTER
                 out << YAML::Newline;
                 out << YAML::Key << "colorspaces";
                 out << YAML::Value << YAML::BeginSeq;
-                for(unsigned i = 0; i < c->getNumColorSpaces(); ++i)
+                for(int i = 0; i < c->getNumColorSpaces(); ++i)
                 {
                     const char* name = c->getColorSpaceNameByIndex(i);
                     save(out, c->getColorSpace(name));
@@ -1795,17 +1871,12 @@ OCIO_NAMESPACE_ENTER
     
     ///////////////////////////////////////////////////////////////////////////
     
-    void OCIOYaml::open(std::istream& istream, ConfigRcPtr& c, const char* filename) const
+    void OCIOYaml::open(std::istream& istream, ConfigRcPtr& c, const char* filename)
     {
         try
         {
-#ifdef OLDYAML
-            YAML::Parser parser(istream);
             YAML::Node node;
-            parser.GetNextDocument(node);
-#else
-            YAML::Node node = YAML::Load(istream);
-#endif
+            read(istream, node);
             load(node, c, filename);
         }
         catch(const std::exception & e)
@@ -1818,12 +1889,41 @@ OCIO_NAMESPACE_ENTER
         }
     }
     
-    void OCIOYaml::write(std::ostream& ostream, const Config* c) const
+    void OCIOYaml::write(std::ostream& ostream, const Config* c)
     {
         YAML::Emitter out;
         save(out, c);
         ostream << out.c_str();
     }
     
+    void OCIOYaml::open(std::istream& istream, TransformRcPtr& t,
+                        const char* filename)
+    {
+        try
+        {
+            YAML::Node node;
+            read(istream, node);
+            loadTransform(node, t, filename);
+        }
+        catch(const std::exception & e)
+        {
+            std::ostringstream os;
+            os << "Error: Loading the OCIO transform ";
+            if(filename) os << "'" << filename << "' ";
+            os << "failed. " << e.what();
+            throw Exception(os.str().c_str());
+        }
+    }
+
+    struct NoDeleter { template <typename T> void operator()(T *) {} };
+
+    void OCIOYaml::write(std::ostream& ostream, const Transform *t)
+    {
+        YAML::Emitter out;
+        ConstTransformRcPtr trc(t, NoDeleter());
+        saveTransform(out, trc);
+        ostream << out.c_str();
+    }
+
 }
 OCIO_NAMESPACE_EXIT

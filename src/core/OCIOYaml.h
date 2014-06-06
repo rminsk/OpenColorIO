@@ -37,8 +37,12 @@ OCIO_NAMESPACE_ENTER
     class OCIOYaml
     {
     public:
-        void open(std::istream& istream, ConfigRcPtr& c, const char* filename = NULL) const;
-        void write(std::ostream& ostream, const Config* c) const;
+        static void open(std::istream& istream, ConfigRcPtr& c,
+                         const char* filename = NULL);
+        static void open(std::istream& istream, TransformRcPtr& c,
+                         const char* filename = NULL);
+        static void write(std::ostream& ostream, const Config* c);
+        static void write(std::ostream& ostream, const Transform* t);
     };
     
 }
