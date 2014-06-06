@@ -400,6 +400,8 @@ OCIO_NAMESPACE_ENTER
         const char * getDisplayColorSpaceName(const char * display, const char * view) const;
         //!cpp:function::
         const char * getDisplayLooks(const char * display, const char * view) const;
+        //!cpp:function::
+        const char * getDisplayDescription(const char * display, const char * view) const;
         
         //!cpp:function:: For the (display,view) combination,
         // specify which colorSpace and look to use.
@@ -408,6 +410,16 @@ OCIO_NAMESPACE_ENTER
         void addDisplay(const char * display, const char * view,
                         const char * colorSpaceName, const char * looks);
         
+        //!cpp:function:: For the (display,view) combination,
+        // specify which colorSpace and look to use.
+        // If a look is not desired, then just pass an empty string.
+        // This version also has a description string.  If a description
+        // is not desired, then just pass an empty string.
+
+        void addDisplay(const char * display, const char * view,
+                        const char * colorSpaceName, const char * looks,
+                        const char * description);
+
         //!cpp:function::
         void clearDisplays();
         

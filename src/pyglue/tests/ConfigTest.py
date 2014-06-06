@@ -19,7 +19,7 @@ displays:
   r709:
     - !<View> {name: Raw, colorspace: raw}
   sRGB:
-    - !<View> {name: Film1D, colorspace: vd8}
+    - !<View> {name: Film1D, colorspace: vd8, description: "sRGB->vd8"}
     - !<View> {name: Raw, colorspace: raw}
 
 active_displays: [sRGB]
@@ -180,7 +180,8 @@ return out_pixel;
         self.assertEqual("Raw", _cfge.getView("sRGB", 1))
         self.assertEqual("vd8", _cfge.getDisplayColorSpaceName("sRGB", "Film1D"))
         self.assertEqual("", _cfg.getDisplayLooks("sRGB", "Film1D"))
-        _cfge.addDisplay("foo", "bar", "foo", "wee")
+        self.assertEqual("sRGB->vd8", _cfg.getDisplayDescription("sRGB", "Film1D"))
+        _cfge.addDisplay("foo", "bar", "foo", "wee", "woop")
         _cfge.clearDisplays()
         _cfge.setActiveDisplays("sRGB")
         self.assertEqual("sRGB", _cfge.getActiveDisplays())
