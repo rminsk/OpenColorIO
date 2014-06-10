@@ -27,8 +27,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #include <Python.h>
-#include <sstream>
 #include <OpenColorIO/OpenColorIO.h>
+#include <sstream>
 
 #include "PyUtil.h"
 #include "PyDoc.h"
@@ -122,9 +122,7 @@ OCIO_NAMESPACE_ENTER
         
         if(!pyobj)
         {
-            std::ostringstream os;
-            os << "Unknown transform type for BuildConstPyTransform.";
-            throw Exception(os.str().c_str());
+            throw Exception("Unknown transform type for BuildConstPyTransform.");
         }
         
         pyobj->constcppobj = new ConstTransformRcPtr();
@@ -223,7 +221,7 @@ OCIO_NAMESPACE_ENTER
         0,                                          //tp_getattr
         0,                                          //tp_setattr
         0,                                          //tp_compare
-        0,                                          //tp_repr
+        PyOCIO_Transform_serialize,                 //tp_repr
         0,                                          //tp_as_number
         0,                                          //tp_as_sequence
         0,                                          //tp_as_mapping
